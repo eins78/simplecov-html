@@ -4,6 +4,11 @@ require 'fileutils'
 require 'digest/sha1'
 require 'time'
 
+# hack
+def inline_assets?
+  !ENV['SIMPLECOV_INLINE_ASSETS'].nil?
+end
+
 # Ensure we are using a compatible version of SimpleCov
 if Gem::Version.new(SimpleCov::VERSION) < Gem::Version.new("0.8.0")
   raise RuntimeError, "The version of SimpleCov you are using is too old. Please update with `gem install simplecov` or `bundle update simplecov`"
@@ -11,8 +16,10 @@ end
 
 class SimpleCov::Formatter::HTMLFormatter
   def format(result)
-    Dir[File.join(File.dirname(__FILE__), '../public/*')].each do |path|
-      FileUtils.cp_r(path, asset_output_path)
+    unless inline_assets?
+      Dir[File.join(File.dirname(__FILE__), '../public/*')].each do |path|
+        FileUtils.cp_r(path, asset_output_path)
+      end
     end
 
     File.open(File.join(output_path, "index.html"), file_mode_format) do |file|
@@ -20,7 +27,7 @@ class SimpleCov::Formatter::HTMLFormatter
     end
     puts output_message(result)
   end
-  
+
   def file_mode_format
     format = 'w+'
 
@@ -55,8 +62,26 @@ class SimpleCov::Formatter::HTMLFormatter
     @asset_output_path
   end
 
-  def assets_path(name)
+  def asset_path_or_inline(name)
+    inline_assets? ? asset_inline(name) : asset_path(name)
+  end
+
+  def asset_path(name)
     File.join('./assets', SimpleCov::Formatter::HTMLFormatter::VERSION, name)
+  end
+
+  # hack
+  def asset_inline(name)
+    require 'sprockets'
+    assets = Sprockets::Environment.new File.expand_path('../..',__FILE__)
+    # from: ../Rakefile assets:compile
+    assets.append_path 'assets/javascripts'
+    assets.append_path 'assets/stylesheets'
+    # also add /public, needed for images
+    assets.append_path 'public'
+    asset = assets.find_asset(name, accept_encoding: 'base64')
+    throw "not found: #{name}" if asset.nil?
+    "data:#{asset.content_type};base64,#{Base64.strict_encode64 asset.to_s}"
   end
 
   # Returns the html for the given source_file

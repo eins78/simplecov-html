@@ -1,3 +1,18 @@
+# simplecov-html-hackish-inline-assets
+
+How to use:
+1. make sure gem `sprockets` is installed (already the case for rails apps)
+2. add this fork to your `Gemfile`, next to `simplecov`. Because it uses
+  the same name, it will replace the dependency for `simplecov` and "just work"
+  due to the awesome power of `bundler`s dependency management:
+
+  ```ruby
+  gem 'simplecov-html', git: 'https://github.com/eins78/simplecov-html.git'
+  ```
+3. Active inlining of assets with `export SIMPLECOV_INLINE_ASSETS=1` (only then `sprockets` is actually used)
+
+---
+
 Default HTML formatter for SimpleCov
 ====================================
 
